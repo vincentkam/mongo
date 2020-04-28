@@ -468,7 +468,7 @@ def check_special_case_keys(cert):
     keys = set(cert.keys())
     required_keys = {'name', 'description', 'Issuer'}
     optional_keys = {'tags'}
-    allowed_tags = {'ecdsa', 'ocsp', 'responder', 'must-staple'}
+    allowed_tags = {'ecdsa', 'ocsp', 'responder', 'must-staple', 'single-ocsp-endpoint'}
     allowed_keys = required_keys.union(optional_keys)
 
     if not keys.issubset(allowed_keys):
@@ -627,7 +627,9 @@ def process_ecdsa_leaf(cert):
             if cert.get('tags'):
                 if "ocsp" in cert['tags']:
                     if not "responder" in cert['tags']:
-                        f.write('authorityInfoAccess = OCSP;URI:http://localhost:9001/power/level,OCSP;URI:http://localhost:8100/status\n')
+                        ocsp_endpoints = ('OCSP;URI:http://localhost:8100/status' if "single-ocsp-endpoint" in cert['tags']
+                                          else 'OCSP;URI:http://localhost:9001/power/level,OCSP;URI:http://localhost:8100/status')
+                        f.write(f'authorityInfoAccess = {ocsp_endpoints}\n')
                         if "must-staple" in cert['tags']:
                             f.write(f'{MUST_STAPLE_KEY_STR}={MUST_STAPLE_VALUE_STR}\n')
         x509args.append('-extfile')
@@ -667,7 +669,8 @@ def process_cert(cert):
         return
 
     if cert['name'] in ['ecdsa-client.pem', 'ecdsa-server.pem', 'ecdsa-server-ocsp.pem',
-                        'ecdsa-server-ocsp-mustStaple.pem', 'ecdsa-ocsp-responder.crt']:
+                        'ecdsa-server-ocsp-mustStaple.pem', 'ecdsa-ocsp-responder.crt',
+                        'ecdsa-server-ocsp-singleEndpoint.pem', 'ecdsa-server-ocsp-mustStaple-singleEndpoint.pem']:
         process_ecdsa_leaf(cert)
         return
 
